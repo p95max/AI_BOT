@@ -117,7 +117,7 @@ def stop_ai_response():
     stop_generation = True
     stop_button.configure(state="disabled")
 
-# Main window
+# Main window design
 app = ctk.CTk()
 app.title("Local AI Chat 'Gemma'")
 app.geometry("900x650")
