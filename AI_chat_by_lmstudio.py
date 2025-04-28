@@ -1,33 +1,33 @@
 import customtkinter as ctk
-import requests
-import time
-from datetime import datetime
 import threading
-import json
-import markdown
 import random
+import time
+import tkinter as tk
+import lmstudio as lms
+from datetime import datetime
 
 # theme
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 # settings
-OLLAMA_URL = 'http://localhost:11434/api/generate'
-MODEL_NAME = 'gemma:2b'
-LOG_FILE = "chat_log(gemma).txt"
+AVAILABLE_MODELS = ['llama-3.2-1b-instruct']
+LOG_FILE = "chat_log.txt"
 
-# Global flags
+# Global flags and state
 stop_generation = False
 response_thread = None
+chat_session = None
+last_system_msg = None
 
 def send_prompt():
-    global stop_generation
+    global stop_generation, chat_session, last_system_msg
 
-    prompt = entry.get()
-    if not prompt.strip():
+    prompt = entry.get().strip()
+    if not prompt:
         return
 
-    saved_prompt = prompt
+    model_name = selected_model.get()
     entry.delete(0, "end")
 
     # Disable input and buttons
@@ -35,11 +35,21 @@ def send_prompt():
     send_button.configure(state="disabled")
     stop_button.configure(state="normal")
 
-    # Show user input
+    # Составляем новое системное сообщение
+    system_msg = f"You are a helpful assistant using {model_name} model."
+
+    # Если сессия не создана или модель/системное сообщение изменилось — создаём новую сессию
+    if chat_session is None or last_system_msg != system_msg:
+        chat_session = lms.Chat(system_msg)
+        last_system_msg = system_msg
+
+    chat_session.add_user_message(prompt)
+
+    # Выводим запрос пользователя
     chat_history.configure(state="normal")
-    chat_history.insert("end", f"\nYou: {saved_prompt}\n", "user")
-    log_message("You", saved_prompt)
-    chat_history.insert("end", "AI: ", "ai")
+    chat_history.insert("end", f"\n🙋 You: {prompt}\n", "user")
+    log_message("You", prompt)
+    chat_history.insert("end", f"\n🤖 AI ({model_name}): ", "ai")
     chat_history.see("end")
     chat_history.configure(state="disabled")
 
@@ -47,37 +57,35 @@ def send_prompt():
     answer = ""
 
     try:
-        with requests.post(OLLAMA_URL, json={
-            'model': MODEL_NAME,
-            'prompt': saved_prompt,
-            'stream': True
-        }, stream=True) as response:
-            if response.status_code == 200:
-                for line in response.iter_lines():
-                    if line and not stop_generation:
-                        try:
-                            data = json.loads(line.decode("utf-8").lstrip("data: ").strip())
-                            token = data.get("response", "")
-                        except Exception:
-                            token = ""
-                        if token:
-                            answer += token
-                            chat_history.configure(state="normal")
-                            for char in token:
-                                chat_history.insert("end", char, "ai")
-                                chat_history.see("end")
-                                chat_history.update()
-                                time.sleep(random.uniform(0.005, 0.02))  # случайная скорость
-                            chat_history.configure(state="disabled")
-                    if stop_generation:
-                        break
-            else:
-                answer = f"\nError: {response.status_code}"
-                chat_history.configure(state="normal")
-                chat_history.insert("end", answer, "ai")
-                chat_history.configure(state="disabled")
+        # Создаём клиент для выбранной модели
+        model = lms.llm(model_name)
+
+        # Получаем ответ
+        raw_response = model.respond(chat_session)
+
+        # Приводим PredictionResult к строке
+        if hasattr(raw_response, "text"):
+            response_str = raw_response.text
+        else:
+            response_str = str(raw_response)
+
+        # Сохраняем в сессию и лог
+        chat_session.add_assistant_response(response_str)
+        answer = response_str
+
+        # Анимированный вывод по словам
+        chat_history.configure(state="normal")
+        for word in response_str.split():
+            if stop_generation:
+                break
+            chat_history.insert("end", word + " ", "ai")
+            chat_history.see("end")
+            chat_history.update()
+            time.sleep(random.uniform(0.01, 0.03))
+        chat_history.configure(state="disabled")
+
     except Exception as e:
-        answer = f"\nException: {e}"
+        answer = f"Exception: {e}"
         chat_history.configure(state="normal")
         chat_history.insert("end", answer, "ai")
         chat_history.configure(state="disabled")
@@ -90,13 +98,16 @@ def send_prompt():
     chat_history.see("end")
     chat_history.configure(state="disabled")
 
-    # Re-enable input
+    # Восстанавливаем интерфейс
     entry.configure(state="normal")
     send_button.configure(state="normal")
     stop_button.configure(state="disabled")
     entry.focus_set()
 
 def clear_chat():
+    global chat_session, last_system_msg
+    chat_session = None
+    last_system_msg = None
     chat_history.configure(state="normal")
     chat_history.delete("1.0", "end")
     chat_history.configure(state="disabled")
@@ -117,19 +128,21 @@ def stop_ai_response():
     stop_generation = True
     stop_button.configure(state="disabled")
 
-# Main window design
+# Main window
 app = ctk.CTk()
-app.title("Local AI Chat 'Gemma'")
+app.title("Local AI Chat")
 app.geometry("900x650")
 
-chat_history = ctk.CTkTextbox(app, wrap="word", font=("SF Pro", 20), width=800, height=450)
+# Chat panel
+chat_history = ctk.CTkTextbox(app, wrap="word", font=("SF Pro", 14), width=800, height=450)
 chat_history.pack(pady=(20, 10), padx=20, fill="both", expand=True)
 chat_history.configure(state="disabled")
 
+# Bottom frame
 frame_bottom = ctk.CTkFrame(app)
 frame_bottom.pack(pady=10, padx=20, fill="x")
 
-entry = ctk.CTkEntry(frame_bottom, font=("SF Pro", 14), width=400, placeholder_text="Type your message here...")
+entry = ctk.CTkEntry(frame_bottom, font=("SF Pro", 20), width=400, placeholder_text="Type your message here...")
 entry.pack(side="left", padx=(0, 10), fill="x", expand=True)
 entry.bind("<Return>", lambda event: threaded_send_prompt())
 
@@ -142,8 +155,14 @@ clear_button.pack(side="left", padx=(0, 10))
 stop_button = ctk.CTkButton(frame_bottom, text="Stop", command=stop_ai_response, fg_color="#e74c3c", state="disabled")
 stop_button.pack(side="left", padx=(0, 10))
 
+selected_model = tk.StringVar(value=AVAILABLE_MODELS[0])
+model_menu = ctk.CTkOptionMenu(frame_bottom, variable=selected_model, values=AVAILABLE_MODELS)
+model_menu.pack(side="left", padx=(0, 10))
+
+# Styling tags
 chat_history.tag_config("user", foreground="#00BFFF")
 chat_history.tag_config("ai", foreground="#7CFC00")
 chat_history.tag_config("info", foreground="#AAAAAA")
 
+# Start app
 app.mainloop()
