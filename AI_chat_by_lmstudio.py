@@ -11,7 +11,7 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 # settings
-AVAILABLE_MODELS = ['llama-3.2-1b-instruct']
+AVAILABLE_MODELS = ['llama-3.2-1b-instruct', 'gemma-3-1b-it-qat']
 LOG_FILE = "chat_log.txt"
 
 # Global flags and state
@@ -38,14 +38,13 @@ def send_prompt():
     # Составляем новое системное сообщение
     system_msg = f"You are a helpful assistant using {model_name} model."
 
-    # Если сессия не создана или модель/системное сообщение изменилось — создаём новую сессию
     if chat_session is None or last_system_msg != system_msg:
         chat_session = lms.Chat(system_msg)
         last_system_msg = system_msg
 
     chat_session.add_user_message(prompt)
 
-    # Выводим запрос пользователя
+
     chat_history.configure(state="normal")
     chat_history.insert("end", f"\n🙋 You: {prompt}\n", "user")
     log_message("You", prompt)
@@ -57,23 +56,23 @@ def send_prompt():
     answer = ""
 
     try:
-        # Создаём клиент для выбранной модели
+
         model = lms.llm(model_name)
 
-        # Получаем ответ
+
         raw_response = model.respond(chat_session)
 
-        # Приводим PredictionResult к строке
+
         if hasattr(raw_response, "text"):
             response_str = raw_response.text
         else:
             response_str = str(raw_response)
 
-        # Сохраняем в сессию и лог
+
         chat_session.add_assistant_response(response_str)
         answer = response_str
 
-        # Анимированный вывод по словам
+
         chat_history.configure(state="normal")
         for word in response_str.split():
             if stop_generation:
@@ -98,7 +97,7 @@ def send_prompt():
     chat_history.see("end")
     chat_history.configure(state="disabled")
 
-    # Восстанавливаем интерфейс
+
     entry.configure(state="normal")
     send_button.configure(state="normal")
     stop_button.configure(state="disabled")
