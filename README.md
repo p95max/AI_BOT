@@ -1,22 +1,33 @@
-Local AI Chat Application
-A local AI-powered chat application built with Python and CustomTkinter for a modern desktop experience.
-This project integrates with Ollama for running local language models such as LLaMA2, Mistral, and Gemma,
-ensuring privacy and data security by keeping all processing offline.
+Local AI Chat
+A desktop chat application for local LLMs
+Description: Local AI Chat is a Python-based desktop application that enables real-time interaction with local language models using a modern CustomTkinter GUI. It supports two implementations: one leveraging the Ollama API with requests for streaming responses and another using the lmstudio library for simplified model integration. The app provides a seamless chat experience with context preservation, customizable response speed, and robust logging.
+Key Features:
 
-Features:
+Real-time chat with local LLMs (e.g., Gemma, Mistral, LLaMA).
+Streaming response display with word-by-word animation.
+Persistent chat context for coherent dialogues.
+Adjustable response speed via a slider.
+Threaded processing to ensure a responsive GUI.
+Chat history logging with file rotation.
 
-- Local AI Models: Powered by Ollama, supporting models like LLaMA2, Mistral, and Gemma.
-- Modern UI: Built with CustomTkinter, providing a macOS-style interface.
-- Model Selection: Easily switch between available models.
-- Chat History: Keeps track of conversations and allows clearing history.
-- No Internet Required: Everything runs locally, ensuring data privacy.
+Technologies:
 
-Technologies Used:
+Python, CustomTkinter, requests, lmstudio
+Threading, JSON, Logging
+Ollama API
 
-- Python: The core programming language for this app.
-- CustomTkinter: A modern wrapper for Tkinter, providing a sleek and responsive UI.
-- Ollama API: For integrating with local language models.
-- Requests: To handle API requests to Ollama.
-- GitHub: For version control and hosting the project.
+Skills Demonstrated:
 
-  More in requirements.txt
+GUI development with CustomTkinter for a polished user interface.
+API integration and streaming data processing with requests.
+Multithreading to prevent UI freezes during AI responses.
+Robust error handling and logging with file rotation.
+Flexible architecture supporting multiple AI backends.
+
+Installation:
+
+Install dependencies: pip install customtkinter requests
+For Ollama: Run ollama serve and pull desired models.
+Run: python AI_chat_by_requests.py or python AI_chat_by_lmstudio.py
+
+About Me: I'm a junior Python developer passionate about building interactive applications. After a six-month Python backend course, I created this project to showcase my skills in GUI programming, API integration, and AI interaction. I'm excited to contribute to open-source projects and grow as a developer.
